@@ -1,63 +1,36 @@
-'use strict';
-const express = require ('express');
-const cors = require ('cors');
+const express=require('express');
 require('dotenv').config();
-//---
-const weather =require('./data/weather.json');
-const PORT = process.env.PORT;
-const server = express ();
-server.use(cors());
+const cors=require('cors');
+const data=express();
+data.use(cors());
 
-server.get('/', (req,res)=>{
-    res.send('home route')
+const weatherData =require('./data/weather.json');
+const { application, response } = require('express');
+
+data.get('/weather',(req,res) => {
+const searchQuery=req.query.searchQuery;
+const lat =req.query.lat;
+const lon =req.query.lon;
+const cityArr = weatherData.find(item =>item.city_name.toLowerCase() === searchQuery.toLowerCase())
+try {
+    const cityData=cityArr.data.map(item => new Forecast(item));
+    res.status(200).send(cityData)
+} catch (error){
+    errorHandle(error, res)
+}
+res.send({cityArr})
 })
-
-
-
-server.get('/weather', handleWeather);
-
-
-function handleWeather(request, response){
-   
-        let x = request.query.x;
-        const result = weather.find((item) =>{
-        
-                if(item.city_name.toLowerCase()===x.toLowerCase()){
-                    console.log('hello from inside')
-                    
-                    return item
-
-                }
-            
-        })
-    try{   
-     const weatherArray = result.data.map(day => new Forecast(day))
-     response.status(200).send(weatherArray.description)
-    console.log(weatherArray)
-    }catch(error){
-        errorHandler(error, response)
-    }          
-
-        
-       
- 
-    
+application.get('*',(req,res) => {res.status(404).send('page not find')})
+function errorHandle(error,res){
+res.status(500).send({error: 'something error'})
 }
 
- function Forecast(day){
-     this.date=day.datetime
-     this.description = day.weather.description 
-
- }
-
-function errorHandler(error, response) {
-    response.status(500).send(`something went wrong ==> ${error}`);
+class Forecast {
+    constructor(day){
+        this.date=day.valid_date;
+        this.description=day.weather.description;
+    }
 }
-
-server.get('*',(rquest,response) =>{
-    response.status(400).send('not found')
-})
-
-server.listen(PORT , ()=>{
-    console.log(`Listrning to PORT ${PORT}`)
+data.listen(process.env.PORT, () => {
+    console.log('server worked!')
 })
